@@ -1,0 +1,40 @@
+Gaudi
+=====
+
+Easy to use build system with minimum, almost zero config.
+
+Features
+--------
+
+Fast: it's really fast, since it's single bash script :P
+Capable: it's possible to download artifacts from maven central which is great for single bash script.
+
+Project structure
+-----------------
+
+ * `build` - automatically generated directory where all generated files are put
+ * `src` - directory for Java sources
+ * `resources` - directory for resources that can be used by running application or by annotation processors during compilation
+ * `compile-only-resources` - resources that should be present only during compilation, i. e. templates for generated code
+ * `run-only-resources` - resources that should not be present during compilation,
+   it's seldomly useful, for example when you develop annotation processor
+
+Commands
+--------
+ * `gaudi init PROJECT_NAME` - creates new directory for new PROJECT and creates some directories
+ * `gaudi compile` - compiles project
+ * `gaudi run` - runs project
+ * `gaudi compile-classpath` - prints out compile time classpath
+ * `gaudi run-classpath` - prints out run time classpath
+ * `gaudi artifact-file ARTIFACT VERSION` - downloads artifact from maven central if nessesary and
+   prints file name corresponding to given `ARTIFACT` and `VERSION`
+ * `gaudi artifact-versions ARTIFACT` prints available versions for given `ARTIFACT`
+
+Configuration
+-------------
+
+Configuration file "$XDG_CONFIG_HOME/gaudi.config" ("$HOME/.config/gaudi.config").
+You can specify following variables in config file to customize gaudi
+
+ * `MAVEN_REPOSITORY` URL of maven repository (default is `https://repo1.maven.org/maven2`)
+
