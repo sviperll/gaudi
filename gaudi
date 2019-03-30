@@ -11,6 +11,9 @@ fi
 
 BUILD_DIR=build
 FINGERPRINT_FILE="$BUILD_DIR/fingerprint"
+JAVAC_OUT_FILE="$BUILD_DIR/javac.out"
+JAVAC_ERR_FILE="$BUILD_DIR/javac.err"
+JAVAC_RESULT_FILE="$BUILD_DIR/javac.result"
 SOURCES_DIR="src"
 RESOURCES_DIR="resources"
 COMPILE_ONLY_RESOURCES_DIR="compile-only-resources"
@@ -197,8 +200,13 @@ case "$1" in
             if test -f "$FINGERPRINT_FILE"; then
                 OLD_FINGERPRINT="$(cat "$FINGERPRINT_FILE")"
                 if test "$FINGERPRINT" '=' "$OLD_FINGERPRINT"; then
-                    echo "Up to date!"
-                    exit 0
+                    cat "$JAVAC_OUT_FILE"
+                    cat "$JAVAC_ERR_FILE" >&2
+                    RESULT="$(cat "$JAVAC_RESULT_FILE")"
+                    echo
+                    echo
+                    echo
+                    exit "$RESULT"
                 fi
                 rm "$FINGERPRINT_FILE"
             fi
@@ -208,7 +216,11 @@ case "$1" in
             mkdir -p "$CLASSES_DIR"
             mkdir -p "$GENERATED_DIR"
             if test -d "$RESOURCES_DIR"; then
-                cp -r "$RESOURCES_DIR"/* "$CLASSES_DIR"
+                for F in "$RESOURCES_DIR"/*; do
+                    if test -e "$F"; then
+                        cp -r "$F" "$CLASSES_DIR"
+                    fi
+                done
             fi
 
             javac \
@@ -221,8 +233,11 @@ case "$1" in
                 -Xlint:all \
                 -d "$CLASSES_DIR" \
                 -s "$GENERATED_DIR" \
-                    $SOURCES
+                    $SOURCES >"$JAVAC_OUT_FILE" 2>"$JAVAC_ERR_FILE"
             RESULT="$?"
+            echo "$RESULT" > "$JAVAC_RESULT_FILE"
+            cat "$JAVAC_OUT_FILE"
+            cat "$JAVAC_ERR_FILE" >&2
 
             if test -d "$RUN_ONLY_RESOURCES_DIR"; then
                 cp -r "$RUN_ONLY_RESOURCES_DIR"/* "$CLASSES_DIR"
