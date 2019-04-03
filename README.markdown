@@ -14,10 +14,9 @@ Project structure
 
  * `build` - automatically generated directory where all generated files are put
  * `src` - directory for Java sources
- * `resources` - directory for resources that can be used by running application or by annotation processors during compilation
- * `compile-only-resources` - resources that should be present only during compilation, i. e. templates for generated code
- * `run-only-resources` - resources that should not be present during compilation,
-   it's seldomly useful, for example when you develop annotation processor
+ * `resources` - resources that should be present during run-time
+ * `compile-resources` - resources that should be present only during compilation, i. e. templates for generated code
+ * `compile-and-run-resources` - resources that should be present during both during compile-time and run-time
 
 Commands
 --------
@@ -29,6 +28,13 @@ Commands
  * `gaudi artifact-file ARTIFACT VERSION` - downloads artifact from maven central if nessesary and
    prints file name corresponding to given `ARTIFACT` and `VERSION`
  * `gaudi artifact-versions ARTIFACT` prints available versions for given `ARTIFACT`
+ * `gaudi new class CLASS_NAME` creates new java file for given class in current directory/package
+ * `gaudi new interface INTERFACE_NAME` creates new java file for given interface in current directory/package
+ * `gaudi new enum INTERFACE_NAME` creates new java file for given enum in current directory/package
+
+You can run gaudi commands in any subdirectories of project directory.
+Project root is detected by `build-info.sh` file.
+`gaudi new ...` commands only works from within sources directory.
 
 Configuration
 -------------

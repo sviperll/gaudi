@@ -15,9 +15,9 @@ JAVAC_OUT_FILE="$BUILD_DIR/javac.out"
 JAVAC_ERR_FILE="$BUILD_DIR/javac.err"
 JAVAC_RESULT_FILE="$BUILD_DIR/javac.result"
 SOURCES_DIR="src"
-RESOURCES_DIR="resources"
-COMPILE_ONLY_RESOURCES_DIR="compile-only-resources"
-RUNTIME_ONLY_RESOURCES_DIR="run-only-resources"
+RESOURCES_DIR="compile-and-run-resources"
+COMPILE_ONLY_RESOURCES_DIR="compile-resources"
+RUN_ONLY_RESOURCES_DIR="resources"
 CLASSES_DIR="$BUILD_DIR/classes"
 GENERATED_DIR="$BUILD_DIR/generated-sources/javac"
 DEPENDENCIES_FILE="$BUILD_DIR/dependencies.lock"
@@ -116,7 +116,7 @@ case "$1" in
                 SOURCES_DIR="$(pwd)"
                 PACKAGE=""
                 case "$INVOKED_IN_DIR" in
-                    $SOURCES_DIR*)
+                    $SOURCES_DIR/*)
                         PACKAGE=$(echo "$INVOKED_IN_DIR" | awk -v "sources_dir=$SOURCES_DIR" '
                             {
                                 gsub(/\//, ".");
@@ -233,7 +233,7 @@ case "$1" in
                                 find "$D2" -type f -printf '%P\n' | sort > "$LIST2"
 
                                 if test "$(join "$LIST1" "$LIST2" | wc -l)" -gt 0; then
-                                    echo "ERROR: You have same entries in $RESOURCES_DIR and $COMPILE_ONLY_RESOURCES_DIR." >&2
+                                    echo "ERROR: You have same entries in $D1 and $D2." >&2
                                     echo "       Every resource should be present in one and only one directory" >&2
                                     echo >&2
                                     join "$LIST1" "$LIST2" | sed 's/^/        /g'
@@ -299,7 +299,11 @@ case "$1" in
                     cat "$JAVAC_ERR_FILE" >&2
 
                     if test -d "$RUN_ONLY_RESOURCES_DIR"; then
-                        cp -r "$RUN_ONLY_RESOURCES_DIR"/* "$CLASSES_DIR"
+                        for F in "$RUN_ONLY_RESOURCES_DIR"/*; do
+                            if test -e "$F"; then
+                                cp -r "$F" "$CLASSES_DIR"
+                            fi
+                        done
                     fi
                     echo "$FINGERPRINT" > "$FINGERPRINT_FILE"
 
