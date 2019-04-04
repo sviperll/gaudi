@@ -9,6 +9,7 @@ Features
  * Fast: it's really fast, since it's single bash script :P
  * Capable: it's possible to download artifacts from maven central which is great for single bash script.
  * You can run gaudi commands in any subdirectories of project directory
+ * Sources are not recompiled when it's not needed, but compiler output is always shown, to remind you about warnings.
 
 Project structure
 -----------------
