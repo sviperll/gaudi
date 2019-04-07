@@ -29,6 +29,10 @@ INVOKED_IN_DIR="$(pwd)"
 case "$1" in
     init)
         NAME="$2"
+        if test -e "$NAME"; then
+            echo "Directory or file already exists: $NAME" >&2
+            exit 2
+        fi
         if test -z "$ROOT_PACKAGE_NAME"; then
             echo "Specify ROOT_PACKAGE_NAME in $CONFIG_FILE file" >&2
             exit 2
