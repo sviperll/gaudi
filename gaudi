@@ -4,6 +4,7 @@ RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$USER}/gaudi"
 CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/gaudi.config"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/gaudi"
 MAVEN_REPOSITORY="https://repo1.maven.org/maven2"
+JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))
 
 if test -f "$CONFIG_FILE"; then
     . "$CONFIG_FILE"
@@ -65,7 +66,7 @@ case "$1" in
         ;;
     artifact-versions)
         ARTIFACT="$2"
-        ARTIFACT_AS_PATH="$(echo "$ARTIFACT" | sed 's%\.%/%g')"
+        ARTIFACT_AS_PATH="$(echo "$ARTIFACT" | sed 's%[.:]%/%g')"
         TEMPFILE="$(mktemp --suffix=.xml)"
         curl -s "$MAVEN_REPOSITORY/$ARTIFACT_AS_PATH/maven-metadata.xml" > "$TEMPFILE"
         echo "cat metadata/versioning/versions/version/text()" \
@@ -77,7 +78,7 @@ case "$1" in
         ARTIFACT="$2"
         VERSION="$3"
         mkdir -p "$CACHE_DIR"
-        ARTIFACT_AS_PATH="$(echo "$ARTIFACT" | sed 's%\.%/%g')"
+        ARTIFACT_AS_PATH="$(echo "$ARTIFACT" | sed 's%[.:]%/%g')"
         ARTIFACT_BASE_NAME=$(basename "$ARTIFACT_AS_PATH")
         ARTIFACT_RELATIVE_PATH="$ARTIFACT_AS_PATH/$VERSION/$ARTIFACT_BASE_NAME-$VERSION.jar"
         ARTIFACT_FILE="$CACHE_DIR/$ARTIFACT_RELATIVE_PATH"
@@ -152,39 +153,53 @@ case "$1" in
                 esac
                 ;;
             resolve)
-                echo "Manual resolution is required: create $DEPENDENCIES_FILE file manually"
-                echo "dependencies.lock format is as follows:"
-                echo
-                echo ARTIFACT1_NAME ARTIFACT1_VERSION
-                echo ARTIFACT2_NAME ARTIFACT2_VERSION
-                echo ...
-                echo ARTIFACT_N_NAME ARTIFACT_N_VERSION
-                echo
-                echo "For example junit launcher can be specified like:"
-                echo
-                echo org.junit.platform.junit-platform-console-standalone 1.0.0
-                ;;
-            classpath)
-                if ! test -f $DEPENDENCIES_FILE; then
-                    echo "WARNING: Classpath is empty: Does not exist: $DEPENDENCIES_FILE" >&2
+                mkdir -p "$(dirname "$DEPENDENCIES_FILE")"
+                if ! test -f dependencies.lock; then
+                    echo "Manual resolution is required: create dependencies.lock file manually"
+                    echo "dependencies.lock format is as follows:"
+                    echo 
+                    echo ARTIFACT1_NAME ARTIFACT1_VERSION
+                    echo ARTIFACT2_NAME ARTIFACT2_VERSION
+                    echo ...
+                    echo ARTIFACT_N_NAME ARTIFACT_N_VERSION
+                    echo
+                    echo "For example junit launcher can be specified like:"
+                    echo
+                    echo org.junit.platform:junit-platform-console-standalone 1.0.0
+                    echo "WARNING: Classpath is empty: Does not exist: dependencies.lock" >&2
+                    echo > "$DEPENDENCIES_FILE"
                     exit 0
                 else
-                    cat "$DEPENDENCIES_FILE" | (
-                        CLASSPATH=""
-                        while read ARTIFACT VERSION; do
-                            ARTIFACT_FILE="$($SELF artifact-file $ARTIFACT $VERSION)"
+                    cp dependencies.lock "$DEPENDENCIES_FILE"
+                    exit 0
+                fi
+                ;;
+            check-dependencies)
+                if test -f $DEPENDENCIES_FILE; then
+                    exit 0
+                else
+                    echo "ERROR: dependencies not resolved" >&2
+                    exit 2
+                fi
+                ;;
+            classpath)
+                "$SELF" check-dependencies && cat "$DEPENDENCIES_FILE" | (
+                    CLASSPATH=""
+                    while read ARTIFACT VERSION; do
+                        if ! test -z "$ARTIFACT" && ! test -z "$VERSION"; then
+                            ARTIFACT_FILE="$("$SELF" artifact-file "$ARTIFACT" "$VERSION")"
                             if ! test "$?" -eq 0; then
                                 exit 2
                             fi
                             if test -n "$CLASSPATH"; then
-                               CLASSPATH="$CLASSPATH:$ARTIFACT_FILE"
+                                CLASSPATH="$CLASSPATH:$ARTIFACT_FILE"
                             else
-                               CLASSPATH="$ARTIFACT_FILE"
+                                CLASSPATH="$ARTIFACT_FILE"
                             fi
-                        done
-                        echo "$CLASSPATH"
-                    )
-                fi
+                        fi
+                    done
+                    echo "$CLASSPATH"
+                )
                 ;;
             compile-classpath)
                 CLASSPATH="$("$SELF" classpath)"
@@ -203,6 +218,7 @@ case "$1" in
                 fi
                 ;;
             compile)
+                "$SELF" resolve
                 CLASSPATH="$("$SELF" compile-classpath)"
                 RESULT="$?"
                 if ! test "$RESULT" -eq 0; then
@@ -281,13 +297,10 @@ case "$1" in
                         done
                     fi
 
-                    javac \
+                    "$JAVA_HOME/bin/javac" \
                         -cp "$CLASSPATH" \
                         -sourcepath '' \
                         -encoding UTF-8 \
-                        -source 8 \
-                        -target 8 \
-                        -Werror \
                         -Xlint:all \
                         -Xdiags:verbose \
                         -d "$CLASSES_DIR" \
@@ -344,7 +357,7 @@ case "$1" in
                             echo "======================================================================================"
                             echo
 
-                            java -cp "$CLASSPATH" "$MAIN_CLASS"
+                            "$JAVA_HOME/bin/java" -cp "$CLASSPATH" "$MAIN_CLASS"
 
                             RESULT="$?"
                             echo
